@@ -879,10 +879,10 @@ function setBc(area,proj){
   if(area&&!proj){ba.style.display='none';bs.style.display='none';bcr.textContent=area.title}
   else{ba.style.display='inline';ba.textContent=area.title;bs.style.display='inline';bcr.textContent=proj.title}
 }
-function goHome(){curArea=null;curProj=null;showPage('home');setBc(null,null)}
+function goHome(fromRouter){curArea=null;curProj=null;showPage('home');setBc(null,null);if(!fromRouter)setHash('')}
 function bcArea(){if(curArea)goToArea(curArea.id)}
 
-function goToArea(id){
+function goToArea(id,fromRouter){
   const a=DATA.areas.find(x=>x.id===id);if(!a)return;
   curArea=a;curProj=null;
   document.getElementById('aTitle').textContent=a.title;
@@ -905,9 +905,10 @@ function goToArea(id){
       </div>
     </div>`).join('');
   showPage('area');setBc(a,null);
+  if(!fromRouter)setHash('/area/'+a.id);
 }
 
-function goToProj(aId,pId){
+function goToProj(aId,pId,fromRouter){
   const a=DATA.areas.find(x=>x.id===aId);if(!a)return;
   const p=a.projects.find(x=>x.id===pId);if(!p)return;
   curArea=a;curProj=p;
@@ -943,6 +944,7 @@ function goToProj(aId,pId){
   }).join('');
   document.getElementById('pTools').innerHTML=p.tools.map(t=>`<span class="tbadge">${t}</span>`).join('');
   showPage('project');setBc(a,p);
+  if(!fromRouter)setHash('/proyecto/'+a.id+'/'+p.id);
 }
 
 /* ══ LIGHTBOX ══ */
@@ -994,7 +996,34 @@ function anchorTo(s){setTimeout(()=>{const el=document.querySelector(s);if(el)el
 function toggleMob(){document.getElementById('mob').classList.toggle('open')}
 function closeMob(){document.getElementById('mob').classList.remove('open')}
 
+/* ══ ROUTER (URL / botones atrás-adelante) ══ */
+function setHash(h){
+  // Actualiza la URL sin recargar. pushState crea una entrada de historial
+  // para que los botones atrás/adelante del navegador funcionen.
+  const target = h ? '#'+h : location.pathname+location.search;
+  const current = location.hash.replace(/^#/,'');
+  if(current !== h.replace(/^#/,'')){
+    history.pushState(null,'',target);
+  }
+}
+function router(){
+  const raw=location.hash.replace(/^#\/?/,'');           // ej: "proyecto/video/video-clienty"
+  const parts=raw.split('/').filter(Boolean);
+  if(parts[0]==='proyecto' && parts[1] && parts[2]){
+    goToProj(parts[1],parts[2],true);
+  } else if(parts[0]==='area' && parts[1]){
+    goToArea(parts[1],true);
+  } else {
+    goHome(true);
+  }
+}
+// Se dispara cuando cambia el hash, incluido al usar atrás/adelante del navegador
+window.addEventListener('hashchange',router);
+// popstate cubre los casos donde el hash queda vacío (volver al home con atrás)
+window.addEventListener('popstate',router);
+
 renderAreas();
+router();          // lee la URL inicial (permite compartir links directos a un proyecto)
 initReveal();
 </script>
 </body>
